@@ -1,62 +1,164 @@
 #task 1
-def sequence_generator(func, first_value, n):
-    """
-    Generator for a numerical sequence.
+class BalanceModificationError(Exception):
+    """Виняток, що сигналізує про заборону змінення балансу."""
+    pass
 
-    :param func: User-defined function to get the next term in the sequence.
-    :param first_value: The initial value (first term) of the sequence.
-    :param n: The number of terms to generate.
-    """
-    value = first_value
-    for _ in range(n):
-        yield value
-        value = func(value)
+class NonExistingPropertyError(Exception):
+    """Виняток для доступу до неіснуючої властивості."""
+    pass
 
+class BalanceDescriptor:
+    def __init__(self, initial_value=0):
+        self._value = initial_value
 
-def next_term(value):
-    """
-    User function that defines the rule for generating the sequence.
-    For example, progression: next term = previous term + 2.
+    def __get__(self, instance, owner):
+        print(f"Accessing balance: {self._value}")
+        return self._value
 
-    :param value: The previous term in the sequence.
-    :return: The next term in the sequence.
-    """
-    return value + 2  # Example rule: each next term is 2 more than the previous one
+    def __set__(self, instance, value):
+        raise BalanceModificationError("Cannot modify balance directly.")
 
+class Account:
+    balance = BalanceDescriptor()
 
-gen = sequence_generator(next_term, 1, 10)  # Start with 1, generate 10 terms
+    def __init__(self, initial_balance=0):
+        self.__dict__['_balance'] = initial_balance
 
-for num in gen:
-    print(num)
+    @property
+    def balance(self):
+        return self._balance
+
+    def __setattr__(self, name, value):
+        if name == 'balance':
+            raise BalanceModificationError("Cannot modify balance directly.")
+        print(f"Setting attribute {name} to {value}")
+        super().__setattr__(name, value)
+
+    def __getattr__(self, name):
+        raise NonExistingPropertyError(f"Property '{name}' does not exist.")
+
+account = Account(1000)
+
+print(account.balance)
+
+try:
+    account.balance = 500
+except BalanceModificationError as e:
+    print(e)
+
+try:
+    print(account.non_existing_property)
+except NonExistingPropertyError as e:
+    print(e)
 #task 2
-def memoize_fibonacci():
-    cache = {}
+class NameModificationError(Exception):
+    """Виняток для сигналізації про заборону зміни імені."""
+    pass
 
-    def fibonacci(n):
-        if n in cache:
-            return cache[n]
+class User:
+    def __init__(self, first_name, last_name):
+        self.__dict__['_first_name'] = first_name
+        self.__dict__['_last_name'] = last_name
 
-        if n <= 1:
-            return n
+    @property
+    def first_name(self):
+        print("Accessing first_name")
+        return self._first_name
 
-        cache[n] = fibonacci(n - 1) + fibonacci(n - 2)
-        return cache[n]
+    @property
+    def last_name(self):
+        print("Accessing last_name")
+        return self._last_name
 
-    return fibonacci
+    def __setattr__(self, name, value):
+        if name in ['first_name', 'last_name']:
+            raise NameModificationError(f"Cannot modify {name} directly.")
+        if name == 'first_name' and not value.isalpha():
+            raise ValueError("First name must contain only alphabetic characters.")
+        if name == 'last_name' and not value.isalpha():
+            raise ValueError("Last name must contain only alphabetic characters.")
+        print(f"Setting attribute {name} to {value}")
+        super().__setattr__(name, value)
 
+    def __getattr__(self, name):
+        raise NonExistingPropertyError(f"Property '{name}' does not exist.")
 
-fib_memoized = memoize_fibonacci()
+user = User("John", "Doe")
 
-n = 35
-print(f"Fibonacci({n}) with memoization:", fib_memoized(n))
-#Висновок:Функція з мемоізацією значно прискорює обчислення ряду Фібоначчі
+print(user.first_name)
+
+try:
+    user.first_name = "Jane123"
+except (NameModificationError, ValueError) as e:
+    print(e)
+
+try:
+    print(user.non_existing_property)
+except NonExistingPropertyError as e:
+    print(e)
 #task 3
-def apply_and_sum(numbers, func):
-    return sum(func(num) for num in numbers)
+class DimensionModificationError(Exception):
+    """Виняток для сигналізації про заборону зміни розмірів."""
+    pass
 
-def square(x):
-    return x ** 2
+class Rectangle:
+    def __init__(self, width, height):
+        if width <= 0 or height <= 0:
+            raise ValueError("Dimensions must be positive numbers.")
+        self.__dict__['_width'] = width
+        self.__dict__['_height'] = height
 
-numbers = [1, 2, 3, 4, 5]
-result = apply_and_sum(numbers, square)
-print(f"Sum of squares: {result}")
+    @property
+    def width(self):
+        print("Accessing width")
+        return self._width
+
+    @property
+    def height(self):
+        print("Accessing height")
+        return self._height
+
+    def __setattr__(self, name, value):
+        if name in ['width', 'height']:
+            raise DimensionModificationError(f"Cannot modify {name} directly.")
+        if name in ['_width', '_height'] and value <= 0:
+            raise ValueError(f"{name} must be a positive number.")
+        print(f"Setting attribute {name} to {value}")
+        super().__setattr__(name, value)
+
+    def __getattr__(self, name):
+        raise NonExistingPropertyError(f"Property '{name}' does not exist.")
+
+    def update_dimensions(self, width=None, height=None):
+        if width is not None:
+            if width <= 0:
+                raise ValueError("Width must be a positive number.")
+            print(f"Updating width to {width}")
+            self.__dict__['_width'] = width
+        if height is not None:
+            if height <= 0:
+                raise ValueError("Height must be a positive number.")
+            print(f"Updating height to {height}")
+            self.__dict__['_height'] = height
+
+    def area(self):
+        print(f"Calculating area: {self.width} * {self.height}")
+        return self.width * self.height
+
+rectangle = Rectangle(10, 20)
+
+print(rectangle.width)
+
+try:
+    rectangle.width = 30
+except DimensionModificationError as e:
+    print(e)
+
+rectangle.update_dimensions(width=15, height=25)
+
+print("Area:", rectangle.area())
+
+try:
+    print(rectangle.non_existing_property)
+except NonExistingPropertyError as e:
+    print(e)
